@@ -1,7 +1,12 @@
 import os
 
-BOT_TOKEN     = os.environ.get("BOT_TOKEN", "")
-ADMIN_ID = [int(x) for x in os.environ.get("ADMIN_ID", "0").split(",")]
-COMPANIES_FILE  = "firmalar.json"
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "sizning_tokeningiz")
+ADMIN_IDS_ENV = os.environ.get("ADMIN_ID", "")
+if ADMIN_IDS_ENV:
+    ADMIN_ID = [int(x.strip()) for x in ADMIN_IDS_ENV.split(",")]
+else:
+    ADMIN_ID = [123456789, 987654321]  # lokal uchun o'z ID laringiz
+
+COMPANIES_FILE = "firmalar.json"
 TEMPLATES_FOLDER = "shablonlar"
-DOCS_FOLDER    = "markitovkalar"
+DOCS_FOLDER = "markitovkalar"
