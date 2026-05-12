@@ -341,11 +341,14 @@ async def product_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 # ── Firma qo'shish ────────────────────────────────────────────────────────────
 
+
 async def add_company_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
     
-    if query.from_user.id != ADMIN_ID:
+    logger.info(f"Firma qo'shish bosdi: {query.from_user.id}, ADMIN_ID: {ADMIN_ID}")
+    
+    if query.from_user.id not in ADMIN_ID:
         await query.edit_message_text(
             "⛔ Siz admin emassiz. Bu amal faqat admin uchun.",
             reply_markup=InlineKeyboardMarkup([[
