@@ -185,26 +185,17 @@ def generate_docx(company, product, template_type):
     )
 
     if not template_file.exists():
-        raise FileNotFoundError(
-            f"Shablon topilmadi: {template_file}\n"
-            "shablonlar/ papkasiga shablon_mini.docx va shablon_big.docx fayllarini qo'ying."
-        )
-    
-    # emoji va boshidagi bo'shliqni olib tashlash
+        raise FileNotFoundError(f"Shablon topilmadi: {template_file}")
+
     clean_product = re.sub(r'^[\U00010000-\U0010ffff\u2600-\u26FF\u2700-\u27BF\s]+', '', product).strip()
 
-    # Shablondagi o'zgaruvchan joylar — { } ichidagi matnlar
+    logger.info(f"Generatsiya: company={company}, product={clean_product}, type={template_type}")
+
     replacements = {
-        # Tovar nomi
         "Чеснок свежий": clean_product,
-        # Exporter
         "ООО «BIG CONSALT»": company["exporter_name"],
-        # Exporter adres (har ikkala variant)
         "100000 Республика Узбекистан, г. Ташкент, Шайхантохурский район, ул. Навои, дом 37.": company["exporter_addr"],
-        "100000 Республика Узбекистан, г. Ташкент, Шайхантохурский\n район, ул. Навои, дом 37.": company["exporter_addr"],
-        # Importer
         "ООО «Сармант-ЮГ»": company["importer_name"],
-        # Importer adres (har ikkala variant)
         "196006, Россия, Санкт-Петербург г., муниципальный округ Московская застава вн. тер. г., Новорощинская ул., д. 4": company["importer_addr"],
     }
 
