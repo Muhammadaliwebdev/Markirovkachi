@@ -467,6 +467,38 @@ async def confirm_delete_company(update: Update, context: ContextTypes.DEFAULT_T
     await query.edit_message_text(f"✅ <b>{name}</b> o'chirildi.", parse_mode="HTML")
     await show_company_list(query.message, context)
 
+async def back_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+    target = query.data.split(":", 1)[1]
+
+    if target == "start":
+        companies = load_companies()
+        keyboard = []
+        for c in companies:
+            keyboard.append([InlineKeyboardButton(
+                c["exporter_name"], callback_data=f"company:{c['id']}"
+            )])
+        keyboard.append([InlineKeyboardButton("➕ Firma qo'shish", callback_data="add_company")])
+        await query.edit_message_text(
+            "🏢 Qaysi firma uchun markitovka kerak?\n\nFirmani tanlang:",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+    elif target == "printer":
+        company_id = context.user_data.get("company_id")
+        company = get_company_by_id(company_id)
+        name = company["exporter_name"] if company else "Firma"
+        keyboard = [
+            [InlineKeyboardButton("🖨 Mini printer (termal)", callback_data="printer:mini")],
+            [InlineKeyboardButton("🖨 Katta printer (A4)", callback_data="printer:big")],
+            [InlineKeyboardButton("⬅️ Orqaga", callback_data="back:start")],
+        ]
+        await query.edit_message_text(
+            f"🏢 <b>{name}</b>\n\nQaysi printer uchun?",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="HTML",
+        )
+
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Xatolik:", exc_info=context.error)
