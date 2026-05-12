@@ -212,9 +212,10 @@ async def show_company_list(message, context: ContextTypes.DEFAULT_TYPE) -> None
     companies = load_companies()
     keyboard = []
     for c in companies:
-        keyboard.append([InlineKeyboardButton(
-            c["exporter_name"], callback_data=f"company:{c['id']}"
-        )])
+        keyboard.append([
+            InlineKeyboardButton(c["exporter_name"], callback_data=f"company:{c['id']}"),
+            InlineKeyboardButton("🗑", callback_data=f"delete:{c['id']}"),
+        ])
     keyboard.append([InlineKeyboardButton("➕ Firma qo'shish", callback_data="add_company")])
     await message.reply_text(
         "🏢 Qaysi firma uchun markitovka kerak?\n\nFirmani tanlang:",
@@ -419,37 +420,52 @@ async def cancel_add(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 # ── Orqaga ────────────────────────────────────────────────────────────────────
 
-async def back_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def delete_company(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
-    target = query.data.split(":", 1)[1]
 
-    if target == "start":
-        companies = load_companies()
-        keyboard = []
-        for c in companies:
-            keyboard.append([InlineKeyboardButton(
-                c["exporter_name"], callback_data=f"company:{c['id']}"
-            )])
-        keyboard.append([InlineKeyboardButton("➕ Firma qo'shish", callback_data="add_company")])
+    if query.from_user.id not in ADMIN_ID:
         await query.edit_message_text(
-            "🏢 Qaysi firma uchun markitovka kerak?\n\nFirmani tanlang:",
-            reply_markup=InlineKeyboardMarkup(keyboard),
+            "⛔ Siz admin emassiz.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("⬅️ Orqaga", callback_data="back:start")
+            ]])
         )
-    elif target == "printer":
-        company_id = context.user_data.get("company_id")
-        company = get_company_by_id(company_id)
-        name = company["exporter_name"] if company else "Firma"
-        keyboard = [
-            [InlineKeyboardButton("🖨 Mini printer (termal)", callback_data="printer:mini")],
-            [InlineKeyboardButton("🖨 Katta printer (A4)", callback_data="printer:big")],
-            [InlineKeyboardButton("⬅️ Orqaga", callback_data="back:start")],
-        ]
-        await query.edit_message_text(
-            f"🏢 <b>{name}</b>\n\nQaysi printer uchun?",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="HTML",
-        )
+        return
+
+    company_id = query.data.split(":", 1)[1]
+    companies = load_companies()
+    company = next((c for c in companies if c["id"] == company_id), None)
+
+    if not company:
+        await query.edit_message_text("⚠️ Firma topilmadi.")
+        return
+
+    # Tasdiqlash tugmasi
+    keyboard = [
+        [InlineKeyboardButton("✅ Ha, o'chir", callback_data=f"confirm_delete:{company_id}")],
+        [InlineKeyboardButton("❌ Bekor qilish", callback_data="back:start")],
+    ]
+    await query.edit_message_text(
+        f"⚠️ <b>{company['exporter_name']}</b> ni o'chirishni tasdiqlaysizmi?",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="HTML",
+    )
+
+
+async def confirm_delete_company(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    company_id = query.data.split(":", 1)[1]
+    companies = load_companies()
+    company = next((c for c in companies if c["id"] == company_id), None)
+    companies = [c for c in companies if c["id"] != company_id]
+    save_companies(companies)
+
+    name = company["exporter_name"] if company else "Firma"
+    await query.edit_message_text(f"✅ <b>{name}</b> o'chirildi.", parse_mode="HTML")
+    await show_company_list(query.message, context)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -477,6 +493,8 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(company_selected, pattern=r"^company:"))
     app.add_handler(CallbackQueryHandler(printer_selected, pattern=r"^printer:"))
     app.add_handler(CallbackQueryHandler(product_selected, pattern=r"^product:"))
+    app.add_handler(CallbackQueryHandler(delete_company, pattern=r"^delete:"))
+    app.add_handler(CallbackQueryHandler(confirm_delete_company, pattern=r"^confirm_delete:"))
     app.add_handler(CallbackQueryHandler(back_handler, pattern=r"^back:"))
     app.add_error_handler(error_handler)
 
